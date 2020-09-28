@@ -31,11 +31,11 @@ class Grader(FilterWithoutDialog):
 		i.axes = pos
 		return i
 
-	@objc.python_method
-	def filter(self, layer, inEditView, customParameters, sourceWidth):
-		diff = sourceWidth - layer.width
-		layer.LSB += diff*0.5
-		layer.RSB += diff*0.5
+	# @objc.python_method
+	# def filter(self, layer, inEditView, customParameters, sourceWidth):
+	# 	diff = sourceWidth - layer.width
+	# 	layer.LSB += diff*0.5
+	# 	layer.RSB += diff*0.5
 
 	@objc.python_method
 	def processFont_withArguments_(self, Font, Arguments):
@@ -81,21 +81,27 @@ class Grader(FilterWithoutDialog):
 				# THIS IS NEW #
 				###############
 				pos = customParameters["pos"]
-				coords = [float(p.strip()) for p in customParameters["pos"].split(",")]
+				coords = [float(p.strip()) for p in str(pos).split(",")]
 				srcFont = self.make_instance(coords).interpolatedFont
-
 				FontMasterId = Font.fontMasterAtIndex_(0).id
 				srcFontMasterId = srcFont.fontMasterAtIndex_(0).id
+
 				Font.kerning[FontMasterId] = srcFont.kerning[srcFontMasterId]
 
 				for thisGlyph in glyphList:
 					Layer = thisGlyph.layerForKey_(FontMasterId)
-					srcLayer = srcFont.glyphs[thisGlyph.name].layers[0]
+					try:
+						srcLayer = srcFont.glyphs[thisGlyph.name].layers[0]
+						diff = srcLayer.width - Layer.width
+						Layer.LSB += diff*0.5
+						Layer.RSB += diff*0.5
 
-					if hasattr(self, 'filter'):
-						self.filter(Layer, False, customParameters, srcLayer.width)
+					# if hasattr(self, 'filter'):
+					# 	self.filter(Layer, False, customParameters, srcLayer.width)
+					except:
+						pass
+
 			except:
-
 				# Custom Parameter
 				if len(Arguments) > 1:
 					Message(title='Error in %s' % self.menuName, message="There was an error in %s's filter() method when called through a Custom Parameter upon font export. Check your Macro window output." % self.menuName)
