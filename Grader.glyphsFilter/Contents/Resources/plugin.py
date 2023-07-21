@@ -84,7 +84,11 @@ class Grader(FilterWithDialog):
 	def makeInstance(self, font, pos):
 		i = GSInstance()
 		i.font = font
-		i.axes = pos
+		axisValues = list(i.axes)
+		for index, axisValue in enumerate(pos):
+			if index < len(axisValues):
+				axisValues[index] = axisValue
+		i.axes = axisValues
 		return i
 	
 	# Actual filter
