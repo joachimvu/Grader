@@ -62,7 +62,7 @@ class Grader(FilterWithDialog):
 	def start(self):
 		
 		# Set default value
-		Glyphs.registerDefault('com.joachimvu.Grader.pos', "400, 100")
+		Glyphs.registerDefault('com.joachimvu.Grader.pos', "100, 50, 0, 25")
 		
 		# Set value of text field
 		self.posField.setStringValue_(Glyphs.defaults['com.joachimvu.Grader.pos'])
@@ -72,7 +72,7 @@ class Grader(FilterWithDialog):
 
 	# Action triggered by UI
 	@objc.IBAction
-	def setValue_( self, sender ):
+	def setPos_( self, sender ):
 		
 		# Store value coming in from dialog
 		Glyphs.defaults['com.joachimvu.Grader.pos'] = sender.stringValue()
@@ -106,14 +106,15 @@ class Grader(FilterWithDialog):
 		coords = [float(p.strip()) for p in str(pos).split(",")]
 		originFont = self.makeInstance(font, coords).interpolatedFont
 		originFontMasterId = originFont.fontMasterAtIndex_(0).id
-		
-		# if not font.kerning[FontMasterId] == originFont.kerning[originFontMasterId]:
-		# 	font.kerning[FontMasterId] = originFont.kerning[originFontMasterId]
 
 		originLayer = originFont.glyphs[glyph.name].layers[0]
 		diff = originLayer.width - layer.width
 		layer.LSB += diff*0.5
 		layer.RSB += diff*0.5
+
+		if not inEditView:
+			if not font.kerning[FontMasterId] == originFont.kerning[originFontMasterId]:
+				font.kerning[FontMasterId] = originFont.kerning[originFontMasterId]
 				
 	@objc.python_method
 	def generateCustomParameter( self ):
