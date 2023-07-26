@@ -13,9 +13,9 @@
 	<key>CFBundleName</key>
 	<string>Grader</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.0</string> <!-- 1.0 -->
+	<string>2.0.1</string> <!-- 1.0 -->
 	<key>CFBundleVersion</key>
-	<string>2</string> <!-- 123 -->
+	<string>3</string> <!-- 123 -->
 	<key>productReleaseNotes</key>
 	<string>Update for Glyphs 3</string>
 	<key>NSHumanReadableCopyright</key>

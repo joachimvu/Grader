@@ -20,15 +20,14 @@ from GlyphsApp import *
 from GlyphsApp.plugins import *
 
 class Grader(FilterWithDialog):
+	domain = "com.joachimvu.Grader.pos"
 
 	# Definitions of IBOutlets
-
 	# The NSView object from the User Interface. Keep this here!
 	dialog = objc.IBOutlet()
-
 	# Text field in dialog
 	posField = objc.IBOutlet()
-
+	
 	@objc.python_method
 	def settings(self):
 		self.menuName = Glyphs.localize({
@@ -62,10 +61,10 @@ class Grader(FilterWithDialog):
 	def start(self):
 		
 		# Set default value
-		Glyphs.registerDefault('com.joachimvu.Grader.pos', "100, 50, 0, 25")
+		Glyphs.registerDefault(self.domain, "100, 50, 0, 25")
 		
 		# Set value of text field
-		self.posField.setStringValue_(Glyphs.defaults['com.joachimvu.Grader.pos'])
+		self.posField.setStringValue_(Glyphs.defaults[self.domain])
 		
 		# Set focus to text field
 		self.posField.becomeFirstResponder()
@@ -75,7 +74,7 @@ class Grader(FilterWithDialog):
 	def setPos_( self, sender ):
 		
 		# Store value coming in from dialog
-		Glyphs.defaults['com.joachimvu.Grader.pos'] = sender.stringValue()
+		Glyphs.defaults[self.domain] = sender.stringValue()
 		
 		# Trigger redraw
 		self.update()
@@ -84,11 +83,14 @@ class Grader(FilterWithDialog):
 	def makeInstance(self, font, pos):
 		i = GSInstance()
 		i.font = font
-		axisValues = list(i.axes)
-		for index, axisValue in enumerate(pos):
-			if index < len(axisValues):
-				axisValues[index] = axisValue
-		i.axes = axisValues
+		if font.axes:
+			print("font, pos:", font, pos)
+			print("i.axes", i.axes)
+			axisValues = list(i.axes)
+			for index, axisValue in enumerate(pos):
+				if index < len(axisValues):
+					axisValues[index] = axisValue
+			i.axes = axisValues
 		return i
 	
 	# Actual filter
@@ -97,11 +99,11 @@ class Grader(FilterWithDialog):
 		
 		# Called on font export, get value from customParameters
 		if "pos" in customParameters:
-			pos = customParameters['pos']
+			pos = customParameters["pos"]
 		
 		# Called through UI, use stored value
 		else:
-			pos = float(Glyphs.defaults['com.joachimvu.Grader.pos'])
+			pos = Glyphs.defaults[self.domain]
 		
 		glyph = layer.parent
 		font = glyph.parent
@@ -122,7 +124,7 @@ class Grader(FilterWithDialog):
 				
 	@objc.python_method
 	def generateCustomParameter( self ):
-		return f"{self.__class__.__name__}; pos: {Glyphs.defaults['com.joachimvu.Grader.pos']};"
+		return f"{self.__class__.__name__}; pos: {Glyphs.defaults[self.domain]};"
 
 	@objc.python_method
 	def __file__(self):
