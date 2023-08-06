@@ -14,100 +14,117 @@
 #
 ###########################################################################################################
 
-from __future__ import division, print_function
+from __future__ import division, print_function, unicode_literals
+import objc
 from GlyphsApp import *
 from GlyphsApp.plugins import *
 
-class Grader(FilterWithoutDialog):
+class Grader(FilterWithDialog):
+	domain = "com.joachimvu.Grader.pos"
 
+	# Definitions of IBOutlets
+	# The NSView object from the User Interface. Keep this here!
+	dialog = objc.IBOutlet()
+	# Text field in dialog
+	posField = objc.IBOutlet()
+	
+	@objc.python_method
 	def settings(self):
-		self.menuName = "Grader"
-		self.keyboardShortcut = None
+		self.menuName = Glyphs.localize({
+			'en': 'Grader',
+			# 'de': 'Mein Filter',
+			# 'fr': 'Mon filtre',
+			# 'es': 'Mi filtro',
+			# 'pt': 'Meu filtro',
+			# 'jp': '私のフィルター',
+			# 'ko': '내 필터',
+			# 'zh': '我的过滤器',
+			})
+		
+		# Word on Run Button (default: Apply)
+		self.actionButtonLabel = Glyphs.localize({
+			'en': 'Grade',
+			# 'de': 'Anwenden',
+			# 'fr': 'Appliquer',
+			# 'es': 'Aplicar',
+			# 'pt': 'Aplique',
+			# 'jp': '申し込む',
+			# 'ko': '대다',
+			# 'zh': '应用',
+			})
+		
+		# Load dialog from .nib (without .extension)
+		self.loadNib('IBdialog', __file__)
 
+	# On dialog show
 	@objc.python_method
-	def make_instance(self, pos):
+	def start(self):
+		
+		# Set default value
+		Glyphs.registerDefault(self.domain, "100, 50, 0, 25")
+		
+		# Set value of text field
+		self.posField.setStringValue_(Glyphs.defaults[self.domain])
+		
+		# Set focus to text field
+		self.posField.becomeFirstResponder()
+
+	# Action triggered by UI
+	@objc.IBAction
+	def setPos_( self, sender ):
+		
+		# Store value coming in from dialog
+		Glyphs.defaults[self.domain] = sender.stringValue()
+		
+		# Trigger redraw
+		self.update()
+	
+	@objc.python_method
+	def makeInstance(self, font, pos):
 		i = GSInstance()
-		i.font = Glyphs.font
-		i.axes = pos
+		i.font = font
+		if font.axes:
+			print("font, pos:", font, pos)
+			print("i.axes", i.axes)
+			axisValues = list(i.axes)
+			for index, axisValue in enumerate(pos):
+				if index < len(axisValues):
+					axisValues[index] = axisValue
+			i.axes = axisValues
 		return i
-
-	# @objc.python_method
-	# def filter(self, layer, inEditView, customParameters, sourceWidth):
-	# 	diff = sourceWidth - layer.width
-	# 	layer.LSB += diff*0.5
-	# 	layer.RSB += diff*0.5
-
+	
+	# Actual filter
 	@objc.python_method
-	def processFont_withArguments_(self, Font, Arguments):
-			"""
-			Invoked when called as Custom Parameter in an instance at export.
-			The Arguments come from the custom parameter in the instance settings.
-			Item 0 in Arguments is the class-name. The consecutive items should be your filter options.
-			"""
-			try:
-				# set glyphList to all glyphs
-				glyphList = Font.glyphs
+	def filter(self, layer, inEditView, customParameters):
+		
+		# Called on font export, get value from customParameters
+		if "pos" in customParameters:
+			pos = customParameters["pos"]
+		
+		# Called through UI, use stored value
+		else:
+			pos = Glyphs.defaults[self.domain]
+		
+		glyph = layer.parent
+		font = glyph.parent
+		fontMasterId = font.fontMasterAtIndex_(0).id
 
-				# customParameters delivered to filter()
-				customParameters = {}
-				unnamedCustomParameterCount = 0
-				for i in range(1, len(Arguments)):
-					if 'include' not in Arguments[i] and 'exclude' not in Arguments[i]:
-						# if key:value pair
-						if ':' in Arguments[i]:
-							key, value = Arguments[i].split(':')
-						# only value given, no key. make key name
-						else:
-							key = unnamedCustomParameterCount
-							unnamedCustomParameterCount += 1
-							value = Arguments[i]
+		coords = [float(p.strip()) for p in str(pos).split(",")]
+		originFont = self.makeInstance(font, coords).interpolatedFont
+		originFontMasterId = originFont.fontMasterAtIndex_(0).id
 
-						# attempt conversion to float value
-						try:
-							customParameters[key] = float(value)
-						except:
-							customParameters[key] = value
+		originLayer = originFont.glyphs[glyph.name].layers[0]
+		diff = originLayer.width - layer.width
+		layer.LSB += diff*0.5
+		layer.RSB += diff*0.5
 
-				# change glyphList to include or exclude glyphs
-				if len(Arguments) > 1:
-					if "exclude:" in Arguments[-1]:
-						excludeList = [n.strip() for n in Arguments.pop(-1).replace("exclude:", "").strip().split(",")]
-						glyphList = [g for g in glyphList if g.name not in excludeList]
-					elif "include:" in Arguments[-1]:
-						includeList = [n.strip() for n in Arguments.pop(-1).replace("include:", "").strip().split(",")]
-						glyphList = [Font.glyphs[n] for n in includeList]
-
-				###############
-				# THIS IS NEW #
-				###############
-				pos = customParameters["pos"]
-				coords = [float(p.strip()) for p in str(pos).split(",")]
-				srcFont = self.make_instance(coords).interpolatedFont
-				FontMasterId = Font.fontMasterAtIndex_(0).id
-				srcFontMasterId = srcFont.fontMasterAtIndex_(0).id
-
-				Font.kerning[FontMasterId] = srcFont.kerning[srcFontMasterId]
-
-				for thisGlyph in glyphList:
-					Layer = thisGlyph.layerForKey_(FontMasterId)
-					try:
-						srcLayer = srcFont.glyphs[thisGlyph.name].layers[0]
-						diff = srcLayer.width - Layer.width
-						Layer.LSB += diff*0.5
-						Layer.RSB += diff*0.5
-
-					# if hasattr(self, 'filter'):
-					# 	self.filter(Layer, False, customParameters, srcLayer.width)
-					except:
-						pass
-
-			except:
-				# Custom Parameter
-				if len(Arguments) > 1:
-					Message(title='Error in %s' % self.menuName, message="There was an error in %s's filter() method when called through a Custom Parameter upon font export. Check your Macro window output." % self.menuName)
-
-				self.logError(traceback.format_exc())
-
+		if not inEditView:
+			if not font.kerning[FontMasterId] == originFont.kerning[originFontMasterId]:
+				font.kerning[FontMasterId] = originFont.kerning[originFontMasterId]
+				
+	@objc.python_method
+	def generateCustomParameter( self ):
+		return f"{self.__class__.__name__}; pos: {Glyphs.defaults[self.domain]};"
 
 	@objc.python_method
 	def __file__(self):
